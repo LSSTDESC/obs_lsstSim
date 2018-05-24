@@ -57,7 +57,9 @@ class GetIdTestCase(unittest.TestCase):
         bits = self.butler.get("deepCoaddId_bits", dataId, immediate=True)
         id = self.butler.get("deepCoaddId", dataId, immediate=True)
         self.assertEqual(bits, 37)
-        self.assertEqual(id, ((((1 * 8192) + 2) * 8192) + 3)*8 + 4)
+        #self.assertEqual(id, ((((1 * 8192) + 2) * 8192) + 3)*8 + 4)
+        # ((((Tract * 2^5 + PatchX) * 2^5) + PatchY) * 2^6) + Filter
+        self.assertEqual(id, ((((1 * 32) + 2) * 32) + 3)*64 + 4)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
