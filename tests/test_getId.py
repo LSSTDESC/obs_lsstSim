@@ -57,9 +57,14 @@ class GetIdTestCase(unittest.TestCase):
         bits = self.butler.get("deepCoaddId_bits", dataId, immediate=True)
         id = self.butler.get("deepCoaddId", dataId, immediate=True)
         self.assertEqual(bits, 37)
-        #self.assertEqual(id, ((((1 * 8192) + 2) * 8192) + 3)*8 + 4)
-        # ((((Tract * 2^5 + PatchX) * 2^5) + PatchY) * 2^6) + Filter
-        self.assertEqual(id, ((((1 * 32) + 2) * 32) + 3)*64 + 4)
+        tract = 1
+        patchx = 2
+        patchy = 3
+        filter = 4
+        # Bit packing used in lsstSimMapper.py is now based on hscMapper.py
+        nbit_patch = 5
+        nbit_filter = 6  
+        self.assertEqual(id, (((((tract << nbit_patch) + patchx) << nbit_patch) + patchy) << nbit_filter) + filter)
 
 
 class MemoryTester(lsst.utils.tests.MemoryTestCase):
