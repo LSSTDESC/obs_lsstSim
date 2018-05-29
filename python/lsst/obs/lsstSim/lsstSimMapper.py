@@ -1,4 +1,3 @@
-from builtins import map
 from past.builtins import basestring
 #
 # LSST Data Management System
@@ -80,10 +79,9 @@ class LsstSimMapper(CameraMapper):
         LsstSimMapper._nbit_tract = 16
         LsstSimMapper._nbit_patch = 5
         LsstSimMapper._nbit_filter = 6
-        LsstSimMapper._nbit_id = 64 - (LsstSimMapper._nbit_tract + \
-                                       2 * LsstSimMapper._nbit_patch + \
+        LsstSimMapper._nbit_id = 64 - (LsstSimMapper._nbit_tract +
+                                       2 * LsstSimMapper._nbit_patch +
                                        LsstSimMapper._nbit_filter)
-
 
     def _transformId(self, dataId):
         """Transform an ID dict into standard form for LSST
@@ -228,14 +226,14 @@ class LsstSimMapper(CameraMapper):
                                    filter coadd, in which case dataId
                                    must contain filter.
         """
-                # taken from hscMapper.py                                                                                     |
+        # taken from hscMapper.py    |
         tract = int(dataId['tract'])
         if tract < 0 or tract >= 2**LsstSimMapper._nbit_tract:
             raise RuntimeError('tract not in range [0,%d)' % (2**LsstSimMapper._nbit_tract))
         patchX, patchY = [int(patch) for patch in dataId['patch'].split(',')]
         for p in (patchX, patchY):
             if p < 0 or p >= 2**LsstSimMapper._nbit_patch:
-                raise RuntimeError('patch component not in range [0, %d)' % \
+                raise RuntimeError('patch component not in range [0, %d)' %
                                    2**LsstSimMapper._nbit_patch)
         oid = (((tract << LsstSimMapper._nbit_patch) + patchX) << LsstSimMapper._nbit_patch) + patchY
         if singleFilter:
