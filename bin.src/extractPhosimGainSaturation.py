@@ -45,7 +45,6 @@ def read_files(path, verbose=False):
             print(file)
         header = fits.getheader(file)
         ampid = '_'.join((header['CCDID'], header['AMPID']))
-#        ampid = header['CHIPID']
         amps[ampid] = header['GAIN'], int(header['SATURATE'])
     return amps
 
