@@ -42,7 +42,7 @@ class SimButlerImage(ButlerImage):
             except (NoResults, RuntimeError):
                 pass
         else:
-            return None
+            return None, ccd
 
         if im is None:
             if not as_masked_image:
