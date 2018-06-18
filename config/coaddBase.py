@@ -1,1 +1,1 @@
-config.doApplyUberCal = True
+config.doApplyUberCal = False
