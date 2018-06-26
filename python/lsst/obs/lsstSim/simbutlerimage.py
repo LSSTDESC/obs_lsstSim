@@ -42,14 +42,16 @@ class SimButlerImage(ButlerImage):
             except (NoResults, RuntimeError):
                 pass
         else:
-            return None
+            return None, ccd
 
         if im is None:
             if not as_masked_image:
-                return self._prepareImage(ccd, imageFactory(*bbox.getDimensions()), binSize), ccd
+                im = self._prepareImage(ccd, imageFactory(*bbox.getDimensions()), binSize)
+                return rotateImageBy90(im, ccd.getOrientation().getNQuarter()), ccd
             else:
-                return self._prepareImage(ccd, afwImage.makeMaskedImage(imageFactory(*bbox.getDimensions())),
-                                          binSize), ccd
+                im = self._prepareImage(ccd, afwImage.makeMaskedImage(imageFactory(*bbox.getDimensions())),
+                                          binSize)
+                return rotateImageBy90(im, ccd.getOrientation().getNQuarter()), ccd
 
         if self.type == "raw":
             raise ValueError("This class only handles ccd size images")
