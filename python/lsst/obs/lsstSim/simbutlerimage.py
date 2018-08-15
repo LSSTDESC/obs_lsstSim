@@ -24,13 +24,13 @@ class SimButlerImage(ButlerImage):
         bbox = ccd.getBBox()
 
         def parse_name_to_dataId(name_str):
-            raft, sensor = name_str.split()
-            return {'raft': raft[-3:], 'sensor': sensor[-3:]}
+            raft, sensor = name_str.split('_')
+            return {'raftName': raft, 'detectorName': sensor}
 
         im = None
         cid = ccd.getName()
         did = parse_name_to_dataId(cid)
-        if self.butler is not None and did['raft'] not in ['0,0', '0,4', '4,0', '4,4']:
+        if self.butler is not None and did['raftName'] not in ['R00', 'R04', 'R40', 'R44']:
             self.kwargs.update(did)
             try:
                 im = self.butler.get(self.type, **self.kwargs)

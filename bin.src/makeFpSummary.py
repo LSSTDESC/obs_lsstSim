@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import lsst.pex.config as pexConfig
 import lsst.pipe.base as pipeBase
-from lsst.pipe.drivers.utils import ButlerTaskRunner
 from lsst.obs.lsstSim import SimButlerImage
 from lsst.afw.cameraGeom import utils as cgu
 from lsst.afw.display.rgb import ZScaleMapping, writeRGB
@@ -11,6 +10,38 @@ import lsst.afw.geom as afwGeom
 import lsst.afw.fits
 lsst.afw.fits.setAllowImageCompression(False)
 
+class ButlerListRunner(pipeBase.TaskRunner):
+    """A task runner that calls run with a list of data references
+    Differs from the default TaskRunner by providing all data references at once,
+    instead of iterating over them one at a time. It also passes a butler to the
+    call method.
+    """
+    @staticmethod
+    def getTargetList(parsedCmd):
+        """Return a list of targets (arguments for __call__); one entry per invocation
+        """
+        return [(parsedCmd.id.refList, parsedCmd.butler),]  # two arguments consisting of a list of dataRefs and a butler
+
+    def __call__(self, args):
+        """Run task.runDataRef on a single target
+        @param args: tuple of arguments to unpack and send to the task
+        @return:
+        - None if doReturnResults false
+        - A pipe_base Struct containing these fields if doReturnResults true:
+            - dataRefList: the argument dict sent to runDataRef
+            - metadata: task metadata after execution of runDataRef
+            - result: result returned by task runDataRef
+        """
+        dataRefList, butler = args
+        task = self.TaskClass(config=self.config, log=self.log)
+        result = task.runDataRef(dataRefList, butler=butler)
+
+        if self.doReturnResults:
+            return pipeBase.Struct(
+                dataRefList=dataRefList,
+                metadata=task.metadata,
+                result=result,
+            )
 
 class FocalplaneSummaryConfig(pexConfig.Config):
     binSize = pexConfig.Field(dtype=int, default=50, doc="pixels to bin for the focalplane summary")
@@ -22,23 +53,19 @@ class FocalplaneSummaryConfig(pexConfig.Config):
 class FocalplaneSummaryTask(pipeBase.CmdLineTask):
     ConfigClass = FocalplaneSummaryConfig
     _DefaultName = "focalplaneSummary"
-    RunnerClass = ButlerTaskRunner
+    RunnerClass = ButlerListRunner
 
     def __init__(self, *args, **kwargs):
         pipeBase.CmdLineTask.__init__(self, *args, **kwargs)
 
-    def run(self, expRef, butler):
+    def runDataRef(self, expRefList, butler):
         """Make summary plots of full focalplane images.
         """
-        sbi = SimButlerImage(butler, type=expRef.butlerSubset.datasetType, visit=expRef.dataId['visit'])
+        sbi = SimButlerImage(butler, type=expRefList[0].butlerSubset.datasetType, visit=expRefList[0].dataId['visit'])
 
-        # Get the per ccd images
-        def parse_name_to_dataId(name_str):
-            raft, sensor = name_str.split()
-            return {'raft': raft[-3:], 'sensor': sensor[-3:]}
-        for ccd in butler.get('camera'):
-            data_id = parse_name_to_dataId(ccd.getName())
-            data_id.update(expRef.dataId)
+        for expRef in expRefList:
+            data_id = expRef.dataId
+            ccd = butler.get('calexp_detector', **data_id)
             try:
                 binned_im = sbi.getCcdImage(ccd, binSize=self.config.sensorBinSize, as_masked_image=True)[0]
                 binned_im = rotateImageBy90(binned_im, ccd.getOrientation().getNQuarter())
@@ -47,6 +74,7 @@ class FocalplaneSummaryTask(pipeBase.CmdLineTask):
             except (TypeError, RuntimeError):
                 # butler couldn't put the image or there was no image to put
                 continue
+
             (x, y) = binned_im.getDimensions()
             boxes = {'A': afwGeom.Box2I(afwGeom.PointI(0, y/2), afwGeom.ExtentI(x, y/2)),
                      'B': afwGeom.Box2I(afwGeom.PointI(0, 0), afwGeom.ExtentI(x, y/2))}
@@ -74,7 +102,7 @@ class FocalplaneSummaryTask(pipeBase.CmdLineTask):
 
         parser = pipeBase.ArgumentParser(name="focalplaneSummary",
                                          *args, **kwargs)
-        parser.add_id_argument("--id", datasetType=dstype, level="visit",
+        parser.add_id_argument("--id", datasetType=dstype,
                                help="data ID, e.g. --id visit=12345")
         return parser
 
